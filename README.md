@@ -1,90 +1,52 @@
-# Obsidian Sample Plugin
+# WriteTex for Obsidian - Usage Guide
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+This plugin allows you to use the **WriteTex** app with Obsidian. WriteTex is an AI-powered OCR app (available on iOS Android Windows Mac) that converts images of math and diagrams into LaTeX, TikZ, or Markdown. This plugin acts as a bridge, enabling the WriteTex app to insert the recognized code directly into your Obsidian notes. [中文](docs/readme_zh.md)
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+*   **Companion for WriteTex App**: Seamlessly connects the WriteTex mobile app to your desktop Obsidian editor.
+*   **Local Proxy Server**: Runs a lightweight server inside Obsidian (Port 50905) to receive data from the app.
+*   **Context Awareness**: Automatically sends the text surrounding your cursor to the AI, improving accuracy by understanding your current document's style and variables.
+*   **Automatic Discovery**: Uses mDNS (Bonjour) so the WriteTex iOS app can find your computer automatically.
+*   **Direct Insertion**: Generated code is inserted immediately at your cursor.
+*   **Streaming**: Watch the text appear in real-time.
 
-## First time developing plugins?
+## Installation
 
-Quick starting guide for new plugin devs:
+1.  Download the latest release.
+2.  Extract the `writetex-obsidian` folder into your vault's plugins directory: `.obsidian/plugins/`.
+3.  Open Obsidian Settings > **Community Plugins** and enable **WriteTex for Obsidian**.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+## Configuration
 
-## Releasing new releases
+1.  Go to **Settings** > **WriteTex**.
+2.  **API Endpoint**: Default is `https://api.openai.com/v1`. Change this if you use a compatible provider (e.g., OpenRouter, LocalAI).
+3.  **API Key**: Enter your OpenAI API key (sk-...).
+4.  **Model**: Default is `gpt-4o`. You can change this to `gpt-4-turbo` or other vision-capable models.
+5.  **Custom Prompt**: (Optional) Add specific instructions, e.g., "Always use `\bm` for bold math symbols."
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+## Usage
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+1.  **Start the Server**:
+    *   The server starts automatically when Obsidian loads.
+    *   Check the status bar in the bottom right: it should say **"WriteTex: On"**.
+    *   If it says "Off", open the Command Palette (`Cmd/Ctrl + P`) and run **"WriteTex: Start Server"**.
 
-## Adding your plugin to the community plugin list
+2.  **Connect Client (e.g., iOS App)**:
+    *   Open the WriteTex app on your phone.
+    *   Ensure your phone and computer are on the **same Wi-Fi network**.
+    *   The app should automatically discover "WriteTex Obsidian @ [YourHostname]".
+    *   If automatic discovery fails, manually enter your computer's IP address and port `50905`.
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+3.  **Scan and Insert**:
+    *   Place your cursor in an Obsidian note where you want the code to appear.
+    *   Take a picture of a math formula or diagram using the mobile app.
+    *   The plugin will receive the image, analyze it with the context of your current note, and stream the LaTeX/Markdown result directly into your editor.
 
-## How to use
+## Troubleshooting
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
-
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
-
-## API Documentation
-
-See https://docs.obsidian.md
+*   **Server won't start**: Check if port `50905` is being used by another application.
+*   **Mobile app can't connect**:
+    *   Ensure both devices are on the same Wi-Fi.
+    *   Check your computer's firewall settings to allow incoming connections on port `50905`.
+*   **"Unauthorized" error**: Ensure the client app sends the Authorization header `Bearer writetex`.
