@@ -1,0 +1,10 @@
+{
+	"id": "writetex-obsidian",
+	"name": "WriteTex",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Use Obsidian with WriteTex",
+	"author": "WriteTex",
+	"authorUrl": "https://www.writetex.com",
+	"isDesktopOnly": true
+}
