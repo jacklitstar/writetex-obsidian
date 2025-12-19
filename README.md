@@ -50,3 +50,7 @@ This plugin allows you to use the **WriteTex** app with Obsidian. WriteTex is an
     *   Ensure both devices are on the same Wi-Fi.
     *   Check your computer's firewall settings to allow incoming connections on port `50905`.
 *   **"Unauthorized" error**: Ensure the client app sends the Authorization header `Bearer writetex`.
+
+## Privacy
+
+For more information on how we handle your data, please see our [Privacy Policy](PRIVACY.md).
