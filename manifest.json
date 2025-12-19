@@ -1,9 +1,9 @@
 {
-	"id": "writetex-obsidian",
+	"id": "writetex",
 	"name": "WriteTex",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Use Obsidian with WriteTex",
+	"description": "Use WriteTex to write math on tablet.",
 	"author": "WriteTex",
 	"authorUrl": "https://www.writetex.com",
 	"isDesktopOnly": true
