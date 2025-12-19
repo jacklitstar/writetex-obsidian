@@ -30,6 +30,8 @@ export interface OpenAIStreamChunk {
  * @returns Accumulated text response
  */
 export async function callOpenAI(endpoint: string, apiKey: string, request: OpenAIRequest): Promise<string> {
+    console.debug('[WriteTex] OpenAI Request:', JSON.stringify(request.messages, null, 2));
+
     if (!apiKey || apiKey.trim() === '') {
         throw new Error('API key is required. Please configure apiKey in settings.');
     }

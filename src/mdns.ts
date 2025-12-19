@@ -1,5 +1,5 @@
 import multicastDns from 'multicast-dns';
-import Bonjour from 'bonjour-service';
+import { Bonjour } from 'bonjour-service';
 import * as os from 'os';
 
 export interface MdnsHandle {
@@ -38,7 +38,7 @@ function getActiveIPv4Addresses(): string[] {
  * - Windows: multicast-dns (explicit interface binding)
  */
 export function advertise(port: number): MdnsHandle {
-  const isMac = process.platform === 'darwin';
+  const isMac = os.platform() === 'darwin';
 
   if (isMac) {
     return advertiseMac(port);
@@ -56,6 +56,8 @@ function advertiseMac(port: number): MdnsHandle {
   const hostname = os.hostname();
   const serviceName = `WriteTex Obsidian @ ${hostname}`;
 
+  console.log(`[mDNS] Starting macOS Bonjour advertising for ${serviceName} on port ${port}`);
+
   const service = instance.publish({
     name: serviceName,
     type: 'writetex-vscode', // Keep the same type for compatibility with the iOS app
@@ -66,15 +68,16 @@ function advertiseMac(port: number): MdnsHandle {
     }
   });
 
-  // Start if method exists
+  // Start if method exists (some versions require this)
   if (typeof (service as any).start === 'function') {
     (service as any).start();
   }
 
-  console.log(`[mDNS] macOS Bonjour advertising: ${serviceName} on port ${port}`);
+  console.log(`[mDNS] Service published: ${serviceName}`);
 
   return {
     stop: async () => new Promise(resolve => {
+      console.log('[mDNS] Stopping macOS Bonjour...');
       const s: any = service;
       if (typeof s.stop === 'function') {
         s.stop(() => {

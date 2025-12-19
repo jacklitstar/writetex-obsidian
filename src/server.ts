@@ -50,6 +50,7 @@ async function handleChatCompletion(
       const isHttps = url.protocol === 'https:';
       const httpModule = isHttps ? https : http;
 
+      console.debug('[WriteTex] OpenAI Stream Request:', JSON.stringify(openaiReq.messages, null, 2));
       const postData = JSON.stringify(openaiReq);
       const options = {
         hostname: url.hostname,
