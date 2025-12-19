@@ -2,10 +2,12 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin } from 'obsidian';
 import { WriteTexSettingTab, DEFAULT_SETTINGS } from './settings';
 import { startServer } from './server';
 import { ServerController, WriteTexSettings } from './types';
+import { advertise, MdnsHandle } from './mdns';
 
 export default class WriteTexPlugin extends Plugin {
 	settings: WriteTexSettings;
 	serverController: ServerController | null = null;
+    mdnsHandle: MdnsHandle | null = null;
     statusBarItem: HTMLElement | null = null;
 
 	async onload() {
@@ -44,10 +46,22 @@ export default class WriteTexPlugin extends Plugin {
             return;
         }
 
+        const port = 50905;
+
         try {
-            const { controller } = startServer(this.app, () => this.settings, 50905);
+            const { controller } = startServer(this.app, () => this.settings, port);
             this.serverController = controller;
             this.updateStatusBar();
+
+            // Start mDNS
+            try {
+                this.mdnsHandle = advertise(port);
+                console.log('[WriteTex] mDNS advertisement started');
+            } catch (err) {
+                console.error('[WriteTex] Failed to start mDNS:', err);
+                // Non-fatal, don't stop server
+            }
+
         } catch (error: any) {
             new Notice(`Failed to start WriteTex server: ${error.message}`);
             console.error(error);
@@ -55,6 +69,11 @@ export default class WriteTexPlugin extends Plugin {
     }
 
     async stopServer() {
+        if (this.mdnsHandle) {
+            await this.mdnsHandle.stop();
+            this.mdnsHandle = null;
+        }
+
         if (this.serverController) {
             await this.serverController.stop();
             this.serverController = null;
