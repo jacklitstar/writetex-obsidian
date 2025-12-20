@@ -8,8 +8,7 @@ import { callOpenAI, OpenAIStreamChunk } from './openai';
 import { insertOrClipboard } from './insert';
 import { getContextSummary } from './context';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseJson(body: string): any {
+function parseJson(body: string): unknown {
   try {
     return JSON.parse(body);
   } catch {
@@ -97,7 +96,7 @@ async function handleChatCompletion(
                       if (jsonStartIndex !== -1) {
                           const jsonStr = line.slice(jsonStartIndex);
                           const json = JSON.parse(jsonStr) as OpenAIStreamChunk;
-                          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+                           
                           const content = json.choices?.[0]?.delta?.content;
                           if (content) {
                               accumulated += content;
@@ -116,12 +115,10 @@ async function handleChatCompletion(
           console.debug(`[WriteTex] Stream ended. Accumulated length: ${accumulated.length}`);
           if (accumulated.trim()) {
             console.debug('[WriteTex] Attempting to insert text...');
-            // eslint-disable-next-line obsidianmd/ui/sentence-case
-            new Notice('WriteTex: inserting generated text...');
+            new Notice('Writetex: inserting generated text...');
             insertOrClipboard(accumulated.trim(), app).catch(err => {
               console.error('[WriteTex] Failed to insert text:', err);
-              // eslint-disable-next-line obsidianmd/ui/sentence-case
-              new Notice('WriteTex: failed to insert text. Check console.');
+              new Notice('Writetex: failed to insert text. Check console.');
             });
           } else {
             console.debug('[WriteTex] Nothing to insert (empty content).');
@@ -138,10 +135,9 @@ async function handleChatCompletion(
       proxyReq.write(postData);
       proxyReq.end();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-      res.write(`data: ${JSON.stringify({ error: { message: err.message } })}\n\n`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.write(`data: ${JSON.stringify({ error: { message } })}\n\n`);
       res.write('data: [DONE]\n\n');
       res.end();
     }
@@ -179,16 +175,15 @@ async function handleChatCompletion(
           total_tokens: 0
         }
       }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       res.writeHead(500, {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       });
       res.end(JSON.stringify({
         error: {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-          message: err.message,
+          message,
           type: 'server_error',
           code: 'internal_error'
         }
@@ -200,7 +195,7 @@ async function handleChatCompletion(
 export function startServer(app: App, getSettings: () => WriteTexSettings, port: number): { server: http.Server, controller: ServerController } {
   const maxSize = 10 * 1024 * 1024; // 10MB limit
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+   
   const server = http.createServer((req, res) => {
     // Wrap async logic in IIFE to handle void return expectation
     void (async () => {
@@ -236,11 +231,9 @@ export function startServer(app: App, getSettings: () => WriteTexSettings, port:
             }
           });
 
-          // eslint-disable-next-line @typescript-eslint/no-misused-promises
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises -- Node.js event handlers don't officially support async, but it works
           req.on('end', async () => {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const json = parseJson(raw);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            const json = parseJson(raw) as Partial<ProxyRequest> | null;
             if (!json || !json.messages) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: { message: 'Invalid request: messages required' } }));
@@ -271,8 +264,7 @@ export function startServer(app: App, getSettings: () => WriteTexSettings, port:
         // 404 for unknown routes
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: { message: 'Not found' } }));
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[WriteTex] Server request error:', err);
         if (!res.headersSent) {
            res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -289,15 +281,13 @@ export function startServer(app: App, getSettings: () => WriteTexSettings, port:
     new Notice(`WriteTex server started on port ${port}`);
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  server.on('error', (err: any) => {
+  server.on('error', (err: unknown) => {
       console.error('[WriteTex] Server error:', err);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      if (err.code === 'EADDRINUSE') {
+      const error = err as { code?: string, message: string };
+      if (error.code === 'EADDRINUSE') {
           new Notice(`WriteTex: port ${port} is already in use.`);
       } else {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          new Notice(`WriteTex: server failed to start: ${err.message}`);
+          new Notice(`WriteTex: server failed to start: ${error.message}`);
       }
   });
 

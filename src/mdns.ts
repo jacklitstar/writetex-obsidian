@@ -54,14 +54,14 @@ export function advertise(port: number): MdnsHandle {
  * Native Bonjour for perfect iOS compatibility
  */
 function advertiseMac(port: number): MdnsHandle {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+   
   const instance = new Bonjour();
   const hostname = os.hostname();
   const serviceName = `WriteTex Obsidian @ ${hostname}`;
 
   console.debug(`[mDNS] Starting macOS Bonjour advertising for ${serviceName} on port ${port}`);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+   
   const service = instance.publish({
     name: serviceName,
     type: 'writetex-vscode', // Keep the same type for compatibility with the iOS app
@@ -73,34 +73,51 @@ function advertiseMac(port: number): MdnsHandle {
   });
 
   // Start if method exists (some versions require this)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-  if (typeof (service as any).start === 'function') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    (service as any).start();
+  const s = service as unknown as { start?: () => void; stop?: (cb: () => void) => void };
+  if (typeof s.start === 'function') {
+    s.start();
   }
 
   console.debug(`[mDNS] Service published: ${serviceName}`);
 
   return {
-    stop: async () => new Promise(resolve => {
+    stop: () => new Promise(resolve => {
       console.debug('[mDNS] Stopping macOS Bonjour...');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-      const s: any = service;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (typeof s.stop === 'function') {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         s.stop(() => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+           
           instance.destroy();
           resolve();
         });
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+         
         instance.destroy();
         resolve();
       }
     })
   };
+}
+
+interface MdnsQuestion {
+    name: string;
+    type: string;
+}
+
+interface MdnsQuery {
+    questions: MdnsQuestion[];
+}
+
+interface MdnsResponse {
+    name: string;
+    type: string;
+    ttl: number;
+    data: string | { priority: number; weight: number; port: number; target: string };
+}
+
+interface MulticastDnsInstance {
+    on(event: 'query', callback: (query: MdnsQuery) => void): void;
+    respond(responses: MdnsResponse[]): void;
+    destroy(callback?: () => void): void;
 }
 
 /**
@@ -113,14 +130,13 @@ function advertiseWindows(port: number): MdnsHandle {
   const serviceType = '_writetex-vscode._tcp.local'; // Keep compatibility
   const fqdn = `${hostname}.local`;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mdnsInstances: any[] = [];
+  const mdnsInstances: MulticastDnsInstance[] = [];
   const addresses = getActiveIPv4Addresses();
 
   if (addresses.length === 0) {
     console.warn('[mDNS] No active IPv4 interfaces found, using default binding');
     try {
-      const mdns = multicastDns({ interface: '0.0.0.0' });
+      const mdns = multicastDns({ interface: '0.0.0.0' }) as unknown as MulticastDnsInstance;
       mdnsInstances.push(mdns);
       setupMdnsResponder(mdns, serviceName, serviceType, fqdn, port);
     } catch (e: unknown) {
@@ -131,7 +147,7 @@ function advertiseWindows(port: number): MdnsHandle {
 
     for (const addr of addresses) {
       try {
-        const mdns = multicastDns({ interface: addr });
+        const mdns = multicastDns({ interface: addr }) as unknown as MulticastDnsInstance;
         mdnsInstances.push(mdns);
         setupMdnsResponder(mdns, serviceName, serviceType, fqdn, port, addr);
         console.debug(`[mDNS] Bound to interface: ${addr}`);
@@ -144,15 +160,15 @@ function advertiseWindows(port: number): MdnsHandle {
   console.debug(`[mDNS] Advertising service: ${serviceName} on port ${port}`);
 
   return {
-    stop: async () => {
+    stop: () => {
       for (const mdns of mdnsInstances) {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
           mdns.destroy();
         } catch (err) {
           console.error('[mDNS] Error destroying instance:', err);
         }
       }
+      return Promise.resolve();
     }
   };
 }
@@ -161,8 +177,7 @@ function advertiseWindows(port: number): MdnsHandle {
  * Setup mDNS responder for Windows multicast-dns
  */
 function setupMdnsResponder(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  mdns: any,
+  mdns: MulticastDnsInstance,
   serviceName: string,
   serviceType: string,
   fqdn: string,
@@ -171,15 +186,11 @@ function setupMdnsResponder(
 ): void {
   const serviceInstanceName = `${serviceName}.${serviceType}`;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-  mdns.on('query', (query: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const responses: any[] = [];
+  mdns.on('query', (query: MdnsQuery) => {
+    const responses: MdnsResponse[] = [];
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     for (const question of query.questions || []) {
       // Respond to service type queries (PTR)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (question.name === serviceType && question.type === 'PTR') {
         responses.push({
           name: serviceType,
@@ -190,9 +201,7 @@ function setupMdnsResponder(
       }
 
       // Respond to service instance queries (SRV, TXT)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (question.name === serviceInstanceName) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (question.type === 'SRV' || question.type === 'ANY') {
           responses.push({
             name: serviceInstanceName,
@@ -207,19 +216,17 @@ function setupMdnsResponder(
           });
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (question.type === 'TXT' || question.type === 'ANY') {
           responses.push({
             name: serviceInstanceName,
             type: 'TXT',
             ttl: 120,
-            data: Buffer.from(`fork=Obsidian`)
+            data: Buffer.from(`fork=Obsidian`) as unknown as string
           });
         }
       }
 
       // Respond to hostname queries (A)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (question.name === fqdn && (question.type === 'A' || question.type === 'ANY')) {
         const addresses = boundAddress ? [boundAddress] : getActiveIPv4Addresses();
         for (const addr of addresses) {
@@ -234,7 +241,6 @@ function setupMdnsResponder(
     }
 
     if (responses.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
       mdns.respond(responses);
     }
   });
@@ -242,8 +248,7 @@ function setupMdnsResponder(
   // Proactively announce our service
   const announceService = () => {
     const addresses = boundAddress ? [boundAddress] : getActiveIPv4Addresses();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const announcements: any[] = [
+    const announcements: MdnsResponse[] = [
       {
         name: serviceType,
         type: 'PTR',
@@ -265,7 +270,7 @@ function setupMdnsResponder(
         name: serviceInstanceName,
         type: 'TXT',
         ttl: 120,
-        data: Buffer.from(`fork=Obsidian`)
+        data: Buffer.from(`fork=Obsidian`) as unknown as string
       }
     ];
 
@@ -279,7 +284,6 @@ function setupMdnsResponder(
       });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     mdns.respond(announcements);
   };
 
@@ -288,9 +292,7 @@ function setupMdnsResponder(
   const announceInterval = setInterval(announceService, 60000); // Every 60 seconds
 
   // Clean up interval on destroy
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-  const originalDestroy = mdns.destroy.bind(mdns) as () => void;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  const originalDestroy = mdns.destroy.bind(mdns);
   mdns.destroy = () => {
     clearInterval(announceInterval);
     originalDestroy();

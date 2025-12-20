@@ -65,9 +65,7 @@ export async function callOpenAI(endpoint: string, apiKey: string, request: Open
                 res.on('data', chunk => { errorBody += chunk; });
                 res.on('end', () => {
                     try {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                        const errorJson = JSON.parse(errorBody);
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                        const errorJson = JSON.parse(errorBody) as { error?: { message?: string } };
                         reject(new Error(`API Error (${res.statusCode}): ${errorJson.error?.message || errorBody}`));
                     } catch {
                         reject(new Error(`API Error (${res.statusCode}): ${errorBody}`));
@@ -90,12 +88,12 @@ export async function callOpenAI(endpoint: string, apiKey: string, request: Open
                     if (trimmed.startsWith('data: ')) {
                         try {
                             const json = JSON.parse(trimmed.slice(6)) as OpenAIStreamChunk;
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+                             
                             const content = json.choices?.[0]?.delta?.content;
                             if (content) {
                                 accumulated += content;
                             }
-                        } catch (err) {
+                        } catch {
                             // Ignore malformed chunks
                         }
                     }

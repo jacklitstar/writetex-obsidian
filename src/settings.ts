@@ -35,11 +35,9 @@ export class WriteTexSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('API key')
-            // eslint-disable-next-line obsidianmd/ui/sentence-case
-            .setDesc('Your OpenAI API key')
+            .setDesc('Openai API key')
             .addText(text => text
-                // eslint-disable-next-line obsidianmd/ui/sentence-case
-                .setPlaceholder('sk-...')
+                .setPlaceholder('Sk-...')
                 .setValue(this.plugin.settings.apiKey)
                 .onChange(async (value) => {
                     this.plugin.settings.apiKey = value;
@@ -48,11 +46,9 @@ export class WriteTexSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Model')
-            // eslint-disable-next-line obsidianmd/ui/sentence-case
-            .setDesc('Model ID (e.g. gpt-4o)')
+            .setDesc('Model ID')
             .addText(text => text
-                // eslint-disable-next-line obsidianmd/ui/sentence-case
-                .setPlaceholder('gpt-4o')
+                .setPlaceholder('Gpt-4o')
                 .setValue(this.plugin.settings.apiModel)
                 .onChange(async (value) => {
                     this.plugin.settings.apiModel = value;

@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin } from 'obsidian';
+import { Notice, Plugin } from 'obsidian';
 import { WriteTexSettingTab, DEFAULT_SETTINGS } from './settings';
 import { startServer } from './server';
 import { ServerController, WriteTexSettings } from './types';
@@ -21,7 +21,7 @@ export default class WriteTexPlugin extends Plugin {
         this.updateStatusBar();
 
 		// Commands
-        this.addCommand({
+		this.addCommand({
             id: 'start-server',
             name: 'Start server',
             callback: () => {
@@ -75,10 +75,9 @@ export default class WriteTexPlugin extends Plugin {
 			// However, since it's called with await in onload, and might be async in future, let's just await Promise.resolve().
 			await Promise.resolve();
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (error: any) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            new Notice(`Failed to start WriteTex server: ${error.message}`);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            new Notice(`Failed to start WriteTex server: ${message}`);
             console.error(error);
         }
     }
@@ -93,27 +92,23 @@ export default class WriteTexPlugin extends Plugin {
             await this.serverController.stop();
             this.serverController = null;
             this.updateStatusBar();
-            // eslint-disable-next-line obsidianmd/ui/sentence-case
-            new Notice('WriteTex server stopped');
+            new Notice('Writetex server stopped');
         }
     }
 
     updateStatusBar() {
         if (this.statusBarItem) {
             if (this.serverController) {
-                // eslint-disable-next-line obsidianmd/ui/sentence-case
-                this.statusBarItem.setText('WriteTex: on');
+                this.statusBarItem.setText('Writetex: on');
                 this.statusBarItem.setAttr('title', 'Server running on port 50905');
             } else {
-                // eslint-disable-next-line obsidianmd/ui/sentence-case
-                this.statusBarItem.setText('WriteTex: off');
+                this.statusBarItem.setText('Writetex: off');
             }
         }
     }
 
 	async loadSettings() {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<WriteTexSettings>);
 	}
 
 	async saveSettings() {
