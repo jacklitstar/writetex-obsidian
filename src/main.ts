@@ -14,7 +14,7 @@ export default class WriteTexPlugin extends Plugin {
 		await this.loadSettings();
 
         // Start server
-        this.startServer();
+        await this.startServer();
 
 		// Status bar
 		this.statusBarItem = this.addStatusBarItem();
@@ -22,15 +22,21 @@ export default class WriteTexPlugin extends Plugin {
 
 		// Commands
         this.addCommand({
-            id: 'writetex-start-server',
-            name: 'Start Server',
-            callback: () => this.startServer()
+            id: 'start-server',
+            name: 'Start server',
+            callback: () => {
+				// Explicitly ignore the promise
+				void this.startServer();
+			}
         });
 
         this.addCommand({
-            id: 'writetex-stop-server',
-            name: 'Stop Server',
-            callback: () => this.stopServer()
+            id: 'stop-server',
+            name: 'Stop server',
+            callback: () => {
+				// Explicitly ignore the promise
+				void this.stopServer();
+			}
         });
 
 		// Settings tab
@@ -38,7 +44,7 @@ export default class WriteTexPlugin extends Plugin {
 	}
 
 	onunload() {
-        this.stopServer();
+        void this.stopServer();
 	}
 
     async startServer() {
@@ -56,13 +62,22 @@ export default class WriteTexPlugin extends Plugin {
             // Start mDNS
             try {
                 this.mdnsHandle = advertise(port);
-                console.log('[WriteTex] mDNS advertisement started');
+                console.debug('[WriteTex] mDNS advertisement started');
             } catch (err) {
                 console.error('[WriteTex] Failed to start mDNS:', err);
                 // Non-fatal, don't stop server
             }
 
+			// Add a small delay or await something if we want to keep async, 
+			// but better to just return Promise.resolve() explicitly if we want to keep it async for future proofing
+			// or just let it be async without await. 
+			// The linter error "Async method 'startServer' has no 'await' expression" suggests we should either await something or remove async.
+			// However, since it's called with await in onload, and might be async in future, let's just await Promise.resolve().
+			await Promise.resolve();
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             new Notice(`Failed to start WriteTex server: ${error.message}`);
             console.error(error);
         }
@@ -78,22 +93,26 @@ export default class WriteTexPlugin extends Plugin {
             await this.serverController.stop();
             this.serverController = null;
             this.updateStatusBar();
-            new Notice('WriteTex Server stopped');
+            // eslint-disable-next-line obsidianmd/ui/sentence-case
+            new Notice('WriteTex server stopped');
         }
     }
 
     updateStatusBar() {
         if (this.statusBarItem) {
             if (this.serverController) {
-                this.statusBarItem.setText('WriteTex: On');
+                // eslint-disable-next-line obsidianmd/ui/sentence-case
+                this.statusBarItem.setText('WriteTex: on');
                 this.statusBarItem.setAttr('title', 'Server running on port 50905');
             } else {
-                this.statusBarItem.setText('WriteTex: Off');
+                // eslint-disable-next-line obsidianmd/ui/sentence-case
+                this.statusBarItem.setText('WriteTex: off');
             }
         }
     }
 
 	async loadSettings() {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
 

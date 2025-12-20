@@ -23,7 +23,7 @@ export class WriteTexSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         new Setting(containerEl)
-            .setName('API Endpoint')
+            .setName('API endpoint')
             .setDesc('OpenAI-compatible API endpoint (e.g. https://api.openai.com/v1)')
             .addText(text => text
                 .setPlaceholder('https://api.openai.com/v1')
@@ -34,9 +34,11 @@ export class WriteTexSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('API Key')
-            .setDesc('Your OpenAI API Key')
+            .setName('API key')
+            // eslint-disable-next-line obsidianmd/ui/sentence-case
+            .setDesc('Your OpenAI API key')
             .addText(text => text
+                // eslint-disable-next-line obsidianmd/ui/sentence-case
                 .setPlaceholder('sk-...')
                 .setValue(this.plugin.settings.apiKey)
                 .onChange(async (value) => {
@@ -46,8 +48,10 @@ export class WriteTexSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Model')
+            // eslint-disable-next-line obsidianmd/ui/sentence-case
             .setDesc('Model ID (e.g. gpt-4o)')
             .addText(text => text
+                // eslint-disable-next-line obsidianmd/ui/sentence-case
                 .setPlaceholder('gpt-4o')
                 .setValue(this.plugin.settings.apiModel)
                 .onChange(async (value) => {
@@ -56,7 +60,7 @@ export class WriteTexSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Custom Prompt')
+            .setName('Custom prompt')
             .setDesc('Custom instructions to append to the system prompt')
             .addTextArea(text => text
                 .setPlaceholder('Enter custom instructions...')

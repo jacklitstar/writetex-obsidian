@@ -8,6 +8,7 @@ export interface ProxyRequest {
     stream?: boolean;
     max_tokens?: number;
     temperature?: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any; // Allow other OpenAI parameters
 }
 

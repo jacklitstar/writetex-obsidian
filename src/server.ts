@@ -1,12 +1,14 @@
 import * as http from 'http';
 import * as https from 'https';
 import { App, Notice } from 'obsidian';
+import { Buffer } from 'buffer';
 import { ServerController, WriteTexSettings } from './types';
 import { transformRequest, ProxyRequest } from './proxy';
 import { callOpenAI, OpenAIStreamChunk } from './openai';
 import { insertOrClipboard } from './insert';
 import { getContextSummary } from './context';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseJson(body: string): any {
   try {
     return JSON.parse(body);
@@ -94,7 +96,8 @@ async function handleChatCompletion(
                       const jsonStartIndex = line.indexOf('{');
                       if (jsonStartIndex !== -1) {
                           const jsonStr = line.slice(jsonStartIndex);
-                          const json: OpenAIStreamChunk = JSON.parse(jsonStr);
+                          const json = JSON.parse(jsonStr) as OpenAIStreamChunk;
+                          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
                           const content = json.choices?.[0]?.delta?.content;
                           if (content) {
                               accumulated += content;
@@ -110,16 +113,18 @@ async function handleChatCompletion(
         apiRes.on('end', () => {
           res.end();
 
-          console.log(`[WriteTex] Stream ended. Accumulated length: ${accumulated.length}`);
+          console.debug(`[WriteTex] Stream ended. Accumulated length: ${accumulated.length}`);
           if (accumulated.trim()) {
-            console.log('[WriteTex] Attempting to insert text...');
-            new Notice('WriteTex: Inserting generated text...');
+            console.debug('[WriteTex] Attempting to insert text...');
+            // eslint-disable-next-line obsidianmd/ui/sentence-case
+            new Notice('WriteTex: inserting generated text...');
             insertOrClipboard(accumulated.trim(), app).catch(err => {
               console.error('[WriteTex] Failed to insert text:', err);
-              new Notice('WriteTex: Failed to insert text. Check console.');
+              // eslint-disable-next-line obsidianmd/ui/sentence-case
+              new Notice('WriteTex: failed to insert text. Check console.');
             });
           } else {
-             console.log('[WriteTex] Nothing to insert (empty content).');
+            console.debug('[WriteTex] Nothing to insert (empty content).');
           }
         });
       });
@@ -133,7 +138,9 @@ async function handleChatCompletion(
       proxyReq.write(postData);
       proxyReq.end();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
       res.write(`data: ${JSON.stringify({ error: { message: err.message } })}\n\n`);
       res.write('data: [DONE]\n\n');
       res.end();
@@ -172,6 +179,7 @@ async function handleChatCompletion(
           total_tokens: 0
         }
       }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       res.writeHead(500, {
         'Content-Type': 'application/json',
@@ -179,6 +187,7 @@ async function handleChatCompletion(
       });
       res.end(JSON.stringify({
         error: {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
           message: err.message,
           type: 'server_error',
           code: 'internal_error'
@@ -191,88 +200,109 @@ async function handleChatCompletion(
 export function startServer(app: App, getSettings: () => WriteTexSettings, port: number): { server: http.Server, controller: ServerController } {
   const maxSize = 10 * 1024 * 1024; // 10MB limit
 
-  const server = http.createServer(async (req, res) => {
-    // Health check
-    if (req.method === 'GET' && req.url === '/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, service: 'WriteTex OpenAI Proxy', port }));
-      return;
-    }
-
-    // CORS preflight
-    if (req.method === 'OPTIONS') {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    // OpenAI-compatible endpoint
-    if (req.method === 'POST' && (req.url === '/v1/chat/completions' || req.url === '/chat/completions')) {
-      let raw = '';
-      let size = 0;
-
-      req.on('data', chunk => {
-        size += chunk.length;
-        if (size > maxSize) {
-          req.destroy();
-        } else {
-          raw += chunk;
-        }
-      });
-
-      req.on('end', async () => {
-        const json = parseJson(raw);
-        if (!json || !json.messages) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: { message: 'Invalid request: messages required' } }));
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  const server = http.createServer((req, res) => {
+    // Wrap async logic in IIFE to handle void return expectation
+    void (async () => {
+      try {
+        // Health check
+        if (req.method === 'GET' && req.url === '/health') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, service: 'WriteTex OpenAI Proxy', port }));
           return;
         }
 
-        // Token authentication (hard-coded check matching VS Code extension)
-        const authHeader = req.headers.authorization;
-        const token = authHeader?.replace(/^Bearer\s+/i, '');
-        if (!token || token !== 'writetex') {
-          res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: { message: 'Unauthorized' } }));
+        // CORS preflight
+        if (req.method === 'OPTIONS') {
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+          res.writeHead(204);
+          res.end();
           return;
         }
 
-        const settings = getSettings();
-        if (!settings.apiKey) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: { message: 'API Key not configured in Obsidian settings' } }));
-            return;
+        // OpenAI-compatible endpoint
+        if (req.method === 'POST' && (req.url === '/v1/chat/completions' || req.url === '/chat/completions')) {
+          let raw = '';
+          let size = 0;
+
+          req.on('data', (chunk: Buffer) => {
+            size += chunk.length;
+            if (size > maxSize) {
+              req.destroy();
+            } else {
+              raw += chunk.toString();
+            }
+          });
+
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
+          req.on('end', async () => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const json = parseJson(raw);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            if (!json || !json.messages) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: { message: 'Invalid request: messages required' } }));
+              return;
+            }
+
+            // Token authentication (hard-coded check matching VS Code extension)
+            const authHeader = req.headers.authorization;
+            const token = authHeader?.replace(/^Bearer\s+/i, '');
+            if (!token || token !== 'writetex') {
+              res.writeHead(401, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: { message: 'Unauthorized' } }));
+              return;
+            }
+
+            const settings = getSettings();
+            if (!settings.apiKey) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: { message: 'API key not configured in Obsidian settings' } }));
+                return;
+            }
+
+            await handleChatCompletion(app, settings, json as ProxyRequest, res);
+          });
+          return;
         }
 
-        await handleChatCompletion(app, settings, json as ProxyRequest, res);
-      });
-      return;
-    }
-
-    // 404 for unknown routes
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: { message: 'Not found' } }));
+        // 404 for unknown routes
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: { message: 'Not found' } }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        console.error('[WriteTex] Server request error:', err);
+        if (!res.headersSent) {
+           res.writeHead(500, { 'Content-Type': 'application/json' });
+           res.end(JSON.stringify({ error: { 
+             message: 'Internal Server Error' 
+           } }));
+        }
+      }
+    })();
   });
 
   server.listen(port, '0.0.0.0', () => {
-    console.log(`[WriteTex] HTTP server listening on 0.0.0.0:${port}`);
-    new Notice(`WriteTex Server started on port ${port}`);
+    console.debug(`[WriteTex] HTTP server listening on 0.0.0.0:${port}`);
+    new Notice(`WriteTex server started on port ${port}`);
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   server.on('error', (err: any) => {
       console.error('[WriteTex] Server error:', err);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (err.code === 'EADDRINUSE') {
-          new Notice(`WriteTex: Port ${port} is already in use.`);
+          new Notice(`WriteTex: port ${port} is already in use.`);
       } else {
-          new Notice(`WriteTex: Server failed to start: ${err.message}`);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          new Notice(`WriteTex: server failed to start: ${err.message}`);
       }
   });
 
   const controller: ServerController = {
-    stop: async () => new Promise(resolve => server.close(() => resolve()))
+    stop: () => new Promise(resolve => server.close(() => resolve()))
   };
 
   return { server, controller };

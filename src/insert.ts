@@ -1,5 +1,4 @@
 import { App, MarkdownView, Notice } from 'obsidian';
-import { ContextSummary } from './context';
 
 export interface InsertResult {
     inserted: boolean;
