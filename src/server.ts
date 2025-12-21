@@ -197,8 +197,8 @@ export function startServer(app: App, getSettings: () => WriteTexSettings, port:
 
    
   const server = http.createServer((req, res) => {
-    // Wrap async logic in IIFE to handle void return expectation
-    void (async () => {
+    // Wrap logic in IIFE to handle void return expectation
+    void (() => {
       try {
         // Health check
         if (req.method === 'GET' && req.url === '/health') {
