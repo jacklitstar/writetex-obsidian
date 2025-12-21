@@ -14,7 +14,7 @@ This plugin allows you to use the **WriteTex** app with Obsidian. WriteTex is an
 ## Installation
 
 1.  Download the latest release.
-2.  Extract the `writetex-obsidian` folder into your vault's plugins directory: `.obsidian/plugins/`.
+2.  Put `main.js` and `manifest.json` in `<VAULT>/.obsidian/plugins/writetex-obsidian`
 3.  Open Obsidian Settings > **Community Plugins** and enable **WriteTex for Obsidian**.
 
 ## Configuration
