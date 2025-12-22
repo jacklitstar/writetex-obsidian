@@ -14,7 +14,7 @@
 ## 安装步骤
 
 1.  下载最新版本的发布包。
-2.  将 `writetex-obsidian` 文件夹解压到您的库（Vault）插件目录中：`.obsidian/plugins/`。
+2.  将 `main.js` 和 `manifest.json` 放到你的Vault的插件文件夹中： `<VAULT>/.obsidian/writetex-obsidian/` 
 3.  打开 Obsidian 设置 > **第三方插件 (Community Plugins)**，启用 **WriteTex for Obsidian**。
 
 ## 配置说明
