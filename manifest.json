@@ -4,7 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Use WriteTex to write math on tablet.",
-	"author": "WriteTex",
+	"author": "jacklitstar",
 	"authorUrl": "https://www.writetex.com",
 	"isDesktopOnly": true
 }
